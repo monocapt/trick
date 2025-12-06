@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ninja Mission</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="game-screen" class="screen active">
+        <h1>Mission: Capture the Scroll!</h1>
+        
+        <div class="difficulty-selection">
+            <p>Select Difficulty:</p>
+            <button id="normal" class="difficulty-button active-difficulty">Normal (3)</button>
+            <button id="medium" class="difficulty-button">Medium (5)</button>
+            <button id="hard" class="difficulty-button">Hard (7)</button>
+        </div>
+
+        <div class="game-area">
+            <div class="enemy" id="enemy-1"></div>
+            <div class="enemy" id="enemy-2"></div>
+            <div class="enemy" id="enemy-3"></div>
+            <div class="player-icon">⚔️ YOU</div>
+        </div>
+        
+        <p>Click the targets to capture them until the counter is zero! (Listen for the sound!)</p>
+        <p id="enemies-remaining">Captures Left (NORMAL): 3</p>
+    </div>
+
+    <div id="level-complete-screen" class="screen">
+        <div class="complete-message">
+            <h2>MISSION ACCOMPLISHED!</h2>
+            <p>You have mastered the technique! You've earned the secret scroll.</p>
+            <button onclick="showBirthdayNote()">OPEN SCROLL &gt;</button>
+        </div>
+    </div>
+
+    <div id="birthday-screen" class="screen">
+        <div class="naruto-background"></div> 
+        
+        <div class="birthday-card">
+            <h1 class="card-header">HAPPY BIRTHDAY, [Sahil sobjii]! 🎉</h1>
+            
+            <div class="image-placeholder" style="background-image: url('your_friends_image.jpg');">
+                </div>
+            
+            <p class="wish-text">
+                To the one who completes every mission and wins every challenge in life! 
+                May your next year be filled with success, laughter, and all the happiness you deserve. 
+                This little surprise is just a small token of my love and best wishes.
+                
+               bello bagge billeya da ke krege bagge bagge billeya da ke krege
+               
+
+            </p>
+            
+            <p class="signature">- Your Friend, [RAWAT JIIII]</p>
+            
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            <div class="confetti"></div>
+            
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
