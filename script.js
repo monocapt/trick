@@ -1,11 +1,11 @@
 // --- Game Configuration ---
-const gameArea = document.getElementById('runner-game-area');
-const character = document.getElementById('character');
-const obstacleContainer = document.getElementById('obstacle-container');
-const scoreDisplay = document.getElementById('score-display');
-const startButton = document.getElementById('start-button');
-const messageArea = document.getElementById('message-area');
-// The 'nextButton' element is now removed from HTML and JS state
+// These variables will be defined when the DOM is ready
+let gameArea;
+let character;
+let obstacleContainer;
+let scoreDisplay;
+let startButton;
+let messageArea;
 
 // --- Game State ---
 let isJumping = false;
@@ -16,18 +16,19 @@ let obstacleSpeed = 6;
 let speedIncreaseInterval;
 let obstacleSpawnTimeout; 
 
-const GROUND_LEVEL = 15; 
-const GAME_INTERVAL = 20; 
+const GROUND_LEVEL = 15; // px (Matches CSS)
+const GAME_INTERVAL = 20; // ms (Game update rate)
 const INITIAL_SPEED = 6;
 
 // --- Touch State for Swipe Detection ---
 let touchStartY = 0;
 const SWIPE_THRESHOLD = 40; 
 
+
 // --- Core Game Functions ---
-// The showBirthdayNote function is completely removed.
 
 function startGame() {
+    // Clear any previous intervals/timeouts
     if (gameLoopInterval) clearInterval(gameLoopInterval);
     if (speedIncreaseInterval) clearInterval(speedIncreaseInterval);
     if (obstacleSpawnTimeout) clearTimeout(obstacleSpawnTimeout);
@@ -54,13 +55,10 @@ function gameLoop() {
     if (isGameOver) return;
 
     score += 1;
-    // Score displayed as distance
     scoreDisplay.textContent = `Distance: ${Math.floor(score / 10)}m`; 
 
     handleObstacles();
     checkCollision();
-    
-    // Win/Endless Condition: Game continues indefinitely.
 }
 
 function jump() {
@@ -80,13 +78,13 @@ function spawnObstacle() {
     
     const obstacle = document.createElement('div');
     obstacle.classList.add('obstacle');
+    // Ensure obstacle starts fully off-screen right
     obstacle.style.left = `${gameArea.clientWidth}px`; 
 
     obstacleContainer.appendChild(obstacle);
 
-    const nextSpawnTime = Math.random() * 1500 + 700; // 0.7s to 2.2s
+    const nextSpawnTime = Math.random() * 1500 + 700; 
 
-    // Set the timeout ID to the global variable
     obstacleSpawnTimeout = setTimeout(spawnObstacle, nextSpawnTime);
 }
 
@@ -94,7 +92,8 @@ function handleObstacles() {
     const obstacles = document.querySelectorAll('.obstacle');
     
     obstacles.forEach(obstacle => {
-        let currentLeft = parseFloat(obstacle.style.left || gameArea.clientWidth);
+        let currentLeft = parseFloat(obstacle.style.left);
+        
         currentLeft -= obstacleSpeed; 
         obstacle.style.left = `${currentLeft}px`;
 
@@ -105,6 +104,7 @@ function handleObstacles() {
 }
 
 function checkCollision() {
+    // We only need to check collision when the character is on the ground
     if (isJumping) return;
 
     const obstacles = document.querySelectorAll('.obstacle');
@@ -119,7 +119,7 @@ function checkCollision() {
         // 1. Check for Horizontal Overlap
         const isXOverlap = (charXPosition < obsLeft + obsWidth) && (charXPosition + charWidth > obsLeft);
         
-        // 2. Check for Vertical Overlap (Since all obstacles are GROUNDED, we only check if the character is grounded)
+        // 2. Check for Vertical Overlap (is the character grounded and hitting a grounded obstacle)
         const isCharacterGrounded = !character.classList.contains('jump');
 
         if (isXOverlap && isCharacterGrounded) {
@@ -151,30 +151,42 @@ document.addEventListener('keydown', e => {
 
 
 // 2. Mobile Touch/Swipe Controls (Swipe Up on the game area)
-if (gameArea) {
-    // We only attach touch listeners once the game area exists
-    gameArea.addEventListener('touchstart', e => {
-        e.preventDefault(); 
-        touchStartY = e.touches[0].clientY;
-    });
+function setupTouchControls() {
+    if (gameArea) {
+        gameArea.addEventListener('touchstart', e => {
+            e.preventDefault(); 
+            touchStartY = e.touches[0].clientY;
+        });
 
-    gameArea.addEventListener('touchend', e => {
-        const touchEndY = e.changedTouches[0].clientY;
-        const deltaY = touchEndY - touchStartY;
+        gameArea.addEventListener('touchend', e => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaY = touchEndY - touchStartY;
 
-        // Check for a clear upward swipe
-        if (deltaY < -SWIPE_THRESHOLD) { 
-            jump();
-        }
-    });
+            // Check for a clear upward swipe
+            if (deltaY < -SWIPE_THRESHOLD) { 
+                jump();
+            }
+        });
+    }
 }
 
 
-// --- Robust Initial Setup ---
+// --- Robust Initial Setup: Ensures all elements are loaded before assignment ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Ensure button listener is only attached once the element exists
+    // Assign global variables now that the DOM is ready
+    gameArea = document.getElementById('runner-game-area');
+    character = document.getElementById('character');
+    obstacleContainer = document.getElementById('obstacle-container');
+    scoreDisplay = document.getElementById('score-display');
+    startButton = document.getElementById('start-button');
+    messageArea = document.getElementById('message-area');
+
+    // Attach button listener
     if (startButton) {
         startButton.addEventListener('click', startGame);
         startButton.style.display = 'block';
     }
+    
+    // Setup touch controls
+    setupTouchControls();
 });
