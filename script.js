@@ -5,69 +5,46 @@ const obstacleContainer = document.getElementById('obstacle-container');
 const scoreDisplay = document.getElementById('score-display');
 const startButton = document.getElementById('start-button');
 const messageArea = document.getElementById('message-area');
-const nextButton = document.getElementById('next-button');
+// The 'nextButton' element is now removed from HTML and JS state
 
 // --- Game State ---
 let isJumping = false;
-let isGameOver = false;
+let isGameOver = true; 
 let score = 0;
 let gameLoopInterval;
-let obstacleSpeed = 5; // Base speed (pixels per interval)
-let speedIncreaseInterval; // Timer for increasing speed
+let obstacleSpeed = 6; 
+let speedIncreaseInterval;
+let obstacleSpawnTimeout; 
 
-const JUMP_HEIGHT = 65; // px (Matches CSS .jump class)
-const GROUND_LEVEL = 15; // px (Matches CSS #ground height)
-const GAME_INTERVAL = 20; // ms (How often the game state updates)
+const GROUND_LEVEL = 15; 
+const GAME_INTERVAL = 20; 
+const INITIAL_SPEED = 6;
 
-// --- Background Animation Function (Keep this for the Cosmic theme) ---
-function generateMeteors() {
-    const meteorContainer = document.getElementById('meteor-shower-container');
-    if (!meteorContainer) return;
-
-    const NUM_METEORS = 30;
-
-    for (let i = 0; i < NUM_METEORS; i++) {
-        const meteor = document.createElement('div');
-        meteor.classList.add('meteor');
-        const startX = Math.random() * 100 + 100;
-        const startY = Math.random() * 100 + 10; 
-        const duration = Math.random() * 5 + 3;
-        const delay = Math.random() * 6;
-
-        meteor.style.top = `${startY}vh`;
-        meteor.style.left = `${startX}vw`;
-        meteor.style.animationDuration = `${duration}s`;
-        meteor.style.animationDelay = `${delay}s`;
-
-        meteorContainer.appendChild(meteor);
-    }
-}
-
-// --- Birthday Screen Function ---
-function showBirthdayNote() {
-    document.getElementById('game-screen').classList.remove('active');
-    document.getElementById('birthday-screen').classList.add('active'); 
-}
+// --- Touch State for Swipe Detection ---
+let touchStartY = 0;
+const SWIPE_THRESHOLD = 40; 
 
 // --- Core Game Functions ---
+// The showBirthdayNote function is completely removed.
 
 function startGame() {
     if (gameLoopInterval) clearInterval(gameLoopInterval);
     if (speedIncreaseInterval) clearInterval(speedIncreaseInterval);
+    if (obstacleSpawnTimeout) clearTimeout(obstacleSpawnTimeout);
 
     // Reset State
     isGameOver = false;
+    isJumping = false;
     score = 0;
-    obstacleSpeed = 5; 
+    obstacleSpeed = INITIAL_SPEED; 
     obstacleContainer.innerHTML = '';
+    character.classList.remove('jump');
     messageArea.textContent = 'JUMP TO SURVIVE!';
     startButton.style.display = 'none';
-    nextButton.style.display = 'none';
     
     // Start Game Loops
     gameLoopInterval = setInterval(gameLoop, GAME_INTERVAL);
-    // Increase speed every 10 seconds
-    speedIncreaseInterval = setInterval(() => { obstacleSpeed += 0.5; }, 10000); 
+    speedIncreaseInterval = setInterval(() => { obstacleSpeed += 0.5; }, 8000); 
 
     // Initial obstacle spawn
     setTimeout(spawnObstacle, 1500); 
@@ -77,10 +54,13 @@ function gameLoop() {
     if (isGameOver) return;
 
     score += 1;
-    scoreDisplay.textContent = `Distance: ${Math.floor(score / 10)}m`;
+    // Score displayed as distance
+    scoreDisplay.textContent = `Distance: ${Math.floor(score / 10)}m`; 
 
     handleObstacles();
     checkCollision();
+    
+    // Win/Endless Condition: Game continues indefinitely.
 }
 
 function jump() {
@@ -89,10 +69,8 @@ function jump() {
     isJumping = true;
     character.classList.add('jump');
 
-    // After jump duration, remove the class to land
     setTimeout(() => {
         character.classList.remove('jump');
-        // Wait for CSS transition to finish before allowing next jump
         setTimeout(() => { isJumping = false; }, 300); 
     }, 400); 
 }
@@ -102,92 +80,70 @@ function spawnObstacle() {
     
     const obstacle = document.createElement('div');
     obstacle.classList.add('obstacle');
-    obstacle.style.left = `${gameArea.clientWidth}px`; // Start off screen right
+    obstacle.style.left = `${gameArea.clientWidth}px`; 
 
     obstacleContainer.appendChild(obstacle);
 
-    // Set a random time for the next obstacle spawn
-    const nextSpawnTime = Math.random() * 2000 + 1000; // 1s to 3s
+    const nextSpawnTime = Math.random() * 1500 + 700; // 0.7s to 2.2s
 
-    setTimeout(spawnObstacle, nextSpawnTime);
+    // Set the timeout ID to the global variable
+    obstacleSpawnTimeout = setTimeout(spawnObstacle, nextSpawnTime);
 }
 
 function handleObstacles() {
     const obstacles = document.querySelectorAll('.obstacle');
     
     obstacles.forEach(obstacle => {
-        let currentLeft = parseInt(obstacle.style.left || gameArea.clientWidth);
-        
-        // Move the obstacle left based on current speed
+        let currentLeft = parseFloat(obstacle.style.left || gameArea.clientWidth);
         currentLeft -= obstacleSpeed; 
         obstacle.style.left = `${currentLeft}px`;
 
-        // Remove obstacles that have moved off screen
-        if (currentLeft < -20) {
+        if (currentLeft < -50) {
             obstacle.remove();
         }
     });
 }
 
 function checkCollision() {
+    if (isJumping) return;
+
     const obstacles = document.querySelectorAll('.obstacle');
     
-    // Get character's position and size (approximation)
-    const charRect = character.getBoundingClientRect();
-    const gameAreaRect = gameArea.getBoundingClientRect();
+    const charXPosition = 20; // Matches CSS left: 20px
+    const charWidth = 35; 
 
-    // Normalized character position relative to game area
-    const charLeft = charRect.left - gameAreaRect.left;
-    const charBottom = gameAreaRect.bottom - charRect.bottom;
-    const charWidth = charRect.width;
-    const charHeight = charRect.height;
-    
     obstacles.forEach(obstacle => {
-        // Get obstacle's position and size (approximation)
-        const obsRect = obstacle.getBoundingClientRect();
-        const obsLeft = obsRect.left - gameAreaRect.left;
-        const obsWidth = obsRect.width;
-        
-        // Check for overlap: 
-        const isXOverlap = charLeft < obsLeft + obsWidth && charLeft + charWidth > obsLeft;
-        const isYOverlap = charBottom < (obsRect.height + GROUND_LEVEL); // Check if character is low enough to hit
+        const obsLeft = parseFloat(obstacle.style.left); 
+        const obsWidth = 25; 
 
-        if (isXOverlap && !isJumping && isYOverlap) {
-             // Collision detected only if NOT jumping
+        // 1. Check for Horizontal Overlap
+        const isXOverlap = (charXPosition < obsLeft + obsWidth) && (charXPosition + charWidth > obsLeft);
+        
+        // 2. Check for Vertical Overlap (Since all obstacles are GROUNDED, we only check if the character is grounded)
+        const isCharacterGrounded = !character.classList.contains('jump');
+
+        if (isXOverlap && isCharacterGrounded) {
              endGame();
         }
     });
-    
-    // Win Condition (Reach 500 meters)
-    if (score > 5000) {
-        winGame();
-    }
 }
 
 function endGame() {
     clearInterval(gameLoopInterval);
     clearInterval(speedIncreaseInterval);
+    clearTimeout(obstacleSpawnTimeout);
     isGameOver = true;
-    messageArea.textContent = `MISSION FAILED! Distance: ${Math.floor(score / 10)}m. Try Again!`;
-    startButton.textContent = 'Restart Mission';
+    messageArea.textContent = `GAME OVER! Final Distance: ${Math.floor(score / 10)}m.`;
+    startButton.textContent = 'Play Again';
     startButton.style.display = 'block';
 }
 
-function winGame() {
-    clearInterval(gameLoopInterval);
-    clearInterval(speedIncreaseInterval);
-    isGameOver = true;
-    messageArea.textContent = `SUCCESS! Sahil, you survived the Asteroid Field!`;
-    nextButton.style.display = 'block';
-}
 
 // --- Event Listeners for Controls ---
 
-startButton.addEventListener('click', startGame);
-
 // 1. Desktop Controls (UP Arrow / W key)
 document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowUp' || e.key === 'w') {
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault(); 
         jump();
     }
@@ -195,22 +151,30 @@ document.addEventListener('keydown', e => {
 
 
 // 2. Mobile Touch/Swipe Controls (Swipe Up on the game area)
-gameArea.addEventListener('touchstart', e => {
-    e.preventDefault(); 
-    touchStartY = e.touches[0].clientY;
-});
+if (gameArea) {
+    // We only attach touch listeners once the game area exists
+    gameArea.addEventListener('touchstart', e => {
+        e.preventDefault(); 
+        touchStartY = e.touches[0].clientY;
+    });
 
-gameArea.addEventListener('touchend', e => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaY = touchEndY - touchStartY;
+    gameArea.addEventListener('touchend', e => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchEndY - touchStartY;
 
-    // Check for a clear upward swipe
-    if (deltaY < -40) { // If swipe is upward and significant (40px threshold)
-        jump();
+        // Check for a clear upward swipe
+        if (deltaY < -SWIPE_THRESHOLD) { 
+            jump();
+        }
+    });
+}
+
+
+// --- Robust Initial Setup ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Ensure button listener is only attached once the element exists
+    if (startButton) {
+        startButton.addEventListener('click', startGame);
+        startButton.style.display = 'block';
     }
 });
-
-
-// --- Initial Setup ---
-generateMeteors();
-startButton.style.display = 'block';
