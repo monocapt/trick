@@ -3,27 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temple Dash Survivor</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Birthday Tic-Tac-Toe Surprise!</title>
+    <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
 
-    <div id="game-screen" class="screen active">
-        <h1>TEMPLE DASH SURVIVOR</h1>
-        <p>Tap or swipe up to jump the obstacles. How far can you run?</p>
+    <div id="game-container">
+        <h1>🎁 Birthday Tic-Tac-Toe</h1>
+        <div id="status">Player X's Turn</div>
         
-        <div id="runner-game-area">
-            <div id="ground"></div>
-            <div id="character">🦖</div> <div id="obstacle-container">
-                </div>
-        </div>
+        <div id="board">
+            </div>
         
-        <div id="score-display">Distance: 0m</div>
-        
-        <button id="start-button">START ESCAPE!</button>
-        <p id="message-area" style="color: #ffcc00; font-weight: bold; margin-top: 10px;">Survive the Ancient Trail!</p>
+        <button id="reveal-button" onclick="revealMessage()">
+            🎉 Claim Your Birthday Wish!
+        </button>
+    </div>
+
+    <div id="birthday-message-container">
+        <h2 id="message-heading">Happy Birthday!</h2>
+        <p id="message-content">
+            Dearest **[Birthday Person's Name]**,<br><br>
+            Winning the game was the easy part! May your special day be filled with as much joy and victory as your final move. You are an amazing person, and I hope this year brings you everything wonderful you deserve. Let the celebration begin!<br><br>
+            With all my love,<br>
+            **[Your Name/Sender]**
+        </p>
+        <p class="edit-note">
+            *Remember to edit the names in bold above before sending!*
+        </p>
     </div>
 
     <script src="script.js"></script>
+
 </body>
 </html>
