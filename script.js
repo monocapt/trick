@@ -1,192 +1,137 @@
-// --- Game Configuration ---
-// These variables will be defined when the DOM is ready
-let gameArea;
-let character;
-let obstacleContainer;
-let scoreDisplay;
-let startButton;
-let messageArea;
+// Get necessary elements from the HTML
+const boardElement = document.getElementById('board');
+const statusElement = document.getElementById('status');
+const revealButton = document.getElementById('reveal-button');
+const messageContainer = document.getElementById('birthday-message-container');
 
-// --- Game State ---
-let isJumping = false;
-let isGameOver = true; 
-let score = 0;
-let gameLoopInterval;
-let obstacleSpeed = 6; 
-let speedIncreaseInterval;
-let obstacleSpawnTimeout; 
+// Game state variables
+let board = Array(9).fill(null); // Represents the 9 cells of the board
+let isXNext = true; // X always starts
 
-const GROUND_LEVEL = 15; // px (Matches CSS)
-const GAME_INTERVAL = 20; // ms (Game update rate)
-const INITIAL_SPEED = 6;
-
-// --- Touch State for Swipe Detection ---
-let touchStartY = 0;
-const SWIPE_THRESHOLD = 40; 
-
+// All possible winning combinations (rows, columns, diagonals)
+const WINNING_COMBINATIONS = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+    [0, 4, 8], [2, 4, 6]             
+];
 
 // --- Core Game Functions ---
 
-function startGame() {
-    // Clear any previous intervals/timeouts
-    if (gameLoopInterval) clearInterval(gameLoopInterval);
-    if (speedIncreaseInterval) clearInterval(speedIncreaseInterval);
-    if (obstacleSpawnTimeout) clearTimeout(obstacleSpawnTimeout);
-
-    // Reset State
-    isGameOver = false;
-    isJumping = false;
-    score = 0;
-    obstacleSpeed = INITIAL_SPEED; 
-    obstacleContainer.innerHTML = '';
-    character.classList.remove('jump');
-    messageArea.textContent = 'JUMP TO SURVIVE!';
-    startButton.style.display = 'none';
-    
-    // Start Game Loops
-    gameLoopInterval = setInterval(gameLoop, GAME_INTERVAL);
-    speedIncreaseInterval = setInterval(() => { obstacleSpeed += 0.5; }, 8000); 
-
-    // Initial obstacle spawn
-    setTimeout(spawnObstacle, 1500); 
-}
-
-function gameLoop() {
-    if (isGameOver) return;
-
-    score += 1;
-    scoreDisplay.textContent = `Distance: ${Math.floor(score / 10)}m`; 
-
-    handleObstacles();
-    checkCollision();
-}
-
-function jump() {
-    if (isJumping || isGameOver) return;
-
-    isJumping = true;
-    character.classList.add('jump');
-
-    setTimeout(() => {
-        character.classList.remove('jump');
-        setTimeout(() => { isJumping = false; }, 300); 
-    }, 400); 
-}
-
-function spawnObstacle() {
-    if (isGameOver) return;
-    
-    const obstacle = document.createElement('div');
-    obstacle.classList.add('obstacle');
-    // Ensure obstacle starts fully off-screen right
-    obstacle.style.left = `${gameArea.clientWidth}px`; 
-
-    obstacleContainer.appendChild(obstacle);
-
-    const nextSpawnTime = Math.random() * 1500 + 700; 
-
-    obstacleSpawnTimeout = setTimeout(spawnObstacle, nextSpawnTime);
-}
-
-function handleObstacles() {
-    const obstacles = document.querySelectorAll('.obstacle');
-    
-    obstacles.forEach(obstacle => {
-        let currentLeft = parseFloat(obstacle.style.left);
-        
-        currentLeft -= obstacleSpeed; 
-        obstacle.style.left = `${currentLeft}px`;
-
-        if (currentLeft < -50) {
-            obstacle.remove();
-        }
-    });
-}
-
-function checkCollision() {
-    // We only need to check collision when the character is on the ground
-    if (isJumping) return;
-
-    const obstacles = document.querySelectorAll('.obstacle');
-    
-    const charXPosition = 20; // Matches CSS left: 20px
-    const charWidth = 35; 
-
-    obstacles.forEach(obstacle => {
-        const obsLeft = parseFloat(obstacle.style.left); 
-        const obsWidth = 25; 
-
-        // 1. Check for Horizontal Overlap
-        const isXOverlap = (charXPosition < obsLeft + obsWidth) && (charXPosition + charWidth > obsLeft);
-        
-        // 2. Check for Vertical Overlap (is the character grounded and hitting a grounded obstacle)
-        const isCharacterGrounded = !character.classList.contains('jump');
-
-        if (isXOverlap && isCharacterGrounded) {
-             endGame();
-        }
-    });
-}
-
-function endGame() {
-    clearInterval(gameLoopInterval);
-    clearInterval(speedIncreaseInterval);
-    clearTimeout(obstacleSpawnTimeout);
-    isGameOver = true;
-    messageArea.textContent = `GAME OVER! Final Distance: ${Math.floor(score / 10)}m.`;
-    startButton.textContent = 'Play Again';
-    startButton.style.display = 'block';
-}
-
-
-// --- Event Listeners for Controls ---
-
-// 1. Desktop Controls (UP Arrow / W key)
-document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-        e.preventDefault(); 
-        jump();
+/**
+ * Generates the 9 interactive cells and attaches event listeners.
+ */
+function createBoard() {
+    boardElement.innerHTML = ''; // Clear board on initialization
+    for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.setAttribute('data-index', i);
+        // Pass the index to the click handler
+        cell.addEventListener('click', () => handleCellClick(i));
+        boardElement.appendChild(cell);
     }
-});
+}
 
+/**
+ * Handles a click on a Tic-Tac-Toe cell.
+ * @param {number} index - The index of the clicked cell (0-8).
+ */
+function handleCellClick(index) {
+    // Stop if the cell is already filled or the game is over
+    if (board[index] || checkWinner()) {
+        return; 
+    }
 
-// 2. Mobile Touch/Swipe Controls (Swipe Up on the game area)
-function setupTouchControls() {
-    if (gameArea) {
-        gameArea.addEventListener('touchstart', e => {
-            e.preventDefault(); 
-            touchStartY = e.touches[0].clientY;
-        });
+    const currentMark = isXNext ? 'X' : 'O';
+    board[index] = currentMark;
+    
+    // Update the display for the clicked cell
+    const cell = document.querySelector(`.cell[data-index="${index}"]`);
+    cell.textContent = currentMark;
+    cell.classList.add(currentMark);
 
-        gameArea.addEventListener('touchend', e => {
-            const touchEndY = e.changedTouches[0].clientY;
-            const deltaY = touchEndY - touchStartY;
+    if (checkWinner()) {
+        statusElement.textContent = `Player ${currentMark} Wins!`;
+        endGame(true);
+        return;
+    }
 
-            // Check for a clear upward swipe
-            if (deltaY < -SWIPE_THRESHOLD) { 
-                jump();
+    // Check for a draw (all cells filled, but no winner)
+    if (board.every(cell => cell !== null)) {
+        statusElement.textContent = `It's a Draw!`;
+        endGame(false);
+        return;
+    }
+
+    // Switch turns
+    isXNext = !isXNext;
+    statusElement.textContent = `Player ${isXNext ? 'X' : 'O'}'s Turn`;
+}
+
+/**
+ * Checks if the current board state has a winner.
+ * @returns {boolean} - True if there is a winner, false otherwise.
+ */
+function checkWinner() {
+    for (const combination of WINNING_COMBINATIONS) {
+        const [a, b, c] = combination;
+        // Check if all three cells in the combination are the same non-null value
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Actions to perform when the game ends (win or draw).
+ * @param {boolean} isWin - True if the game was a win, false for a draw.
+ */
+function endGame(isWin) {
+    // Disable further clicks
+    document.querySelectorAll('.cell').forEach(cell => {
+        cell.style.cursor = 'default';
+        // To make it stop working, we remove the listener by cloning the element
+        let oldCell = cell;
+        let newCell = oldCell.cloneNode(true);
+        oldCell.parentNode.replaceChild(newCell, oldCell);
+    });
+    
+    // Show the button to reveal the birthday message
+    revealButton.style.display = 'block';
+    
+    // Optional: Highlight winning cells
+    if (isWin) {
+         for (const combination of WINNING_COMBINATIONS) {
+            const [a, b, c] = combination;
+            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                document.querySelector(`.cell[data-index="${a}"]`).style.backgroundColor = '#90ee90';
+                document.querySelector(`.cell[data-index="${b}"]`).style.backgroundColor = '#90ee90';
+                document.querySelector(`.cell[data-index="${c}"]`).style.backgroundColor = '#90ee90';
+                break;
             }
-        });
+        }
     }
 }
 
+// --- Reveal Function (called by the button) ---
 
-// --- Robust Initial Setup: Ensures all elements are loaded before assignment ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Assign global variables now that the DOM is ready
-    gameArea = document.getElementById('runner-game-area');
-    character = document.getElementById('character');
-    obstacleContainer = document.getElementById('obstacle-container');
-    scoreDisplay = document.getElementById('score-display');
-    startButton = document.getElementById('start-button');
-    messageArea = document.getElementById('message-area');
-
-    // Attach button listener
-    if (startButton) {
-        startButton.addEventListener('click', startGame);
-        startButton.style.display = 'block';
-    }
+/**
+ * Hides the game and reveals the hidden birthday message section.
+ */
+function revealMessage() {
+    // Get the element to hide
+    const gameContainer = document.getElementById('game-container');
     
-    // Setup touch controls
-    setupTouchControls();
-});
+    // Hide the game container
+    gameContainer.style.display = 'none';
+    
+    // Reveal the message container using the 'revealed' class for animation
+    messageContainer.classList.add('revealed');
+    
+    // Scroll to the message smoothly
+    messageContainer.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Initialize the game when the page loads
+window.onload = createBoard;
